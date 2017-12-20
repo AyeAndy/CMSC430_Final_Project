@@ -349,7 +349,7 @@ Function | Params | Returns
 `(set-add st v)` &rarr; generic-set? | `st`: generic-set?<br />`v`: any/c | set that includes v plus all elements of st.
 `(set-remove st v)` &rarr; generic-set? | `st`: generic-set?<br />`v`: any/c | set that includes all elements of st except v.
 
-I also implemented set, set-add, and set-remove using HAMT. The way I implemented set is simple; a set is merely a hashmap but with its keys mapped to itself (as values). set-member? was also included as it was necessary for testing. I added these primitive functions to `utils.rkt` and defined them in `header.cpp` as shown below.
+I also implemented set, set-add, and set-remove using HAMT. The way I implemented set is simple; a set is merely a hashmap but with its keys mapped to itself (as values). set-member? was also included as it was necessary for testing. I added these primitive functions to `utils.rkt` and defined them in `header.cpp` as shown below. This set implementation is limited and does not reflect all of the possible ways of calling these functions.
 
 ``` c++ 
 ...
