@@ -52,13 +52,32 @@ Function | Params | Returns
 
 # Part 2
 
-To test these specific cases, I added additional cases to `tests.rkt` that would check for specific tags that would be raised due to these errors below. The test files are separated into two files - `public` and `llvm-bad-status`. `public` files are able to be run using `run-test "all"`; however, the `llvm-bad-status`'s result can only be observed by running `test-expression "[test-name]"` and checking the bin file generated for the error generated (I am sorry about the inconvenience).
+\*\*To test these specific cases, I added additional cases to `tests.rkt` that would check for specific tags that would be raised due to these errors below. The test files are separated into two files - `public` and `llvm-bad-status`. `public` files are able to be run using `run-test "all"`; however, the `llvm-bad-status`'s result can only be observed by running `test-expression "[test-name]"` and checking the bin file generated for the error generated (I am sorry about the inconvenience).\*\*
+
+```racket
+...
+(define (test-expression exp)
+  (define stage0 (top-level exp))
+  (define stage1 (proc->llvm (closure-convert (cps-convert (anf-convert (alphatize (assignment-convert (simplify-ir (desugar stage0)))))))))
+
+  (define llvm-result (eval-llvm stage1))
+
+  (if (or
+      (equal? llvm-result 'letrec_letrec*_binding_error)
+      (equal? llvm-result 'function_application_error))
+      #t
+      (if (equal? (eval-top-level stage0) (eval-llvm stage1))
+          #t
+          #f))
+  )
+...  
+```
 
 ### 1) Vector referencing/setting index out of bounds
 
-###### Tests: llvm-bad-status/vector-ref-error0.scm, llvm-bad-status/vector-set-error0.scm
+##### Tests: `llvm-bad-status/vector-ref-error0.scm`, `llvm-bad-status/vector-set-error0.scm`
 
-An error is thrown if there is attempt to reference an index of a vector that is out of bounds. I decided to change the `header.cpp` to reflect this error when it occurs.
+An error is thrown if there is attempt to reference an index of a vector that is out of bounds. I decided to change the `header.cpp` to reflect this error when it occurs. When the index parameter is greater than the length of the vector (stored in the first element of the vector, bitshifted to the left 3 times), I throw an error that alerts the users of an index out of bounds exception.
 
 ``` c++
 ...
@@ -103,7 +122,9 @@ GEN_EXPECT3ARGLIST(applyprim_vector_45set_33, prim_vector_45set_33)
 
 ### 2) Division by zero
 
-To address this problem, I defined a new definition in the style of `top-level.rkt` output that represents a function that takes in a list and checks if any one of them are 0s. If one of them turn out to be 0, it will cause a halt with `'division_by_zero`. I append this new definition to every occurence of a pattern that matches (/ e0 e1 ...). 
+##### Tests: `public/division0.scm`, `public/division0_hard.scm`
+
+To address this problem, I defined a new definition in the style of `top-level.rkt` output that represents a function that takes in a list and checks if any one of the datums in the list after the first element are 0s. If one of them turn out to be 0, it will cause a halt with `'division_by_zero` during run-time. I append this new definition to every occurence of a pattern that matches (/ e0 e1 ...). 
 
 ``` racket
 ...
@@ -140,6 +161,8 @@ To address this problem, I defined a new definition in the style of `top-level.r
 
 ### 3) Non-function value is applied
 
+##### Tests: `public/function_application_hard.scm`, `public/function_application.scm`
+
 To address this issue, whenever I matched (es ...) in `desguar.rkt`, I check to make sure that the first element is a procedure. If not, the program will halt and return `'function_application_error` during run-time.
 
 ``` racket
@@ -161,6 +184,8 @@ To address this issue, whenever I matched (es ...) in `desguar.rkt`, I check to 
 
 ### 4) Use of not-yet initialized letrec and letrec\* variable
 
+##### Tests: `public/letrec-binding0.scm`, `public/letrec*-binding.scm`
+
 In `cps.rkt`, whenever a symbol is alphatized in the alphatization stage, I check to make sure that it is actually in the environment. If it is not, I replace the symbol with a `'letrec_letrec*_binding_error` that will appear at run-time.
 
 ``` racket
@@ -177,6 +202,8 @@ In `cps.rkt`, whenever a symbol is alphatized in the alphatization stage, I chec
 ```
 
 ### 5) Memory cap
+
+##### Tests: `llvm-bad-status/memory-cap0.scm`, `llvm-bad-status/memory-cap1.scm`
 
 In `header.cpp`, whenever memory is allocated using malloc, I increment a global variable called `current_memory` to add the amount of bytes allocated by malloc. When that limit reaches 250MB as defined by `MEMORY_CAP` macro, an error is thrown that notifies the users that memory has run out.
 
@@ -205,9 +232,26 @@ u64* alloc(const u64 m)
 
 # Part 3
 
+In order for part 3 (HAMT) to work, I had to replace all the instances of `GC_MALLOC` in `hamt.h` with regular `malloc` and remove all requirements of `gc.h`. I also had to change a line in `utils.rkt` to increase the number of header-str lines allowed. 
+
+I had originally planned to include TAGS for hash and set, but did not have time to add any custom functionalities
+
+```c++
+...
+#define SET_TAG 1
+#define HASH_TAG 2
+...
+```
+
 ### 1) Immutable hashmaps using HAMT, supporting hash-ref, hash-set, and hash-remove.
 
-hash-ref, hash-set, and hash-remove are implemented (hash-remove is added to utils.rkt) using HAMT. I added these primitive functions to `utils.rkt`.
+Function | Params | Returns
+--- | --- | ---
+`(hash)` &rarr; and/c hash? hash-equal? immutable? | | an immutable hash table
+`(hash-ref hash key)` &rarr; any? | `h`: hash?<br />`k`: any/c | the value of key in hash
+`(hash-set hash key value)` &rarr; and/c hash? hash-equal? immutable? | `h`: hash?<br />`k`: any/c<br />`v`: any/c | an immutable hash table
+
+hash-ref, hash-set, and hash-remove are implemented (hash-remove is added to utils.rkt) using HAMT. I added these primitive functions to `utils.rkt`. I defined new methods in `header.cpp` that matches `hash`, `hash-ref`, `hash-set`, and `hash-ref` prims. This hash implementation is limited and does not reflect all of the possible ways of calling these functions. A struct called `c_d` was used and passed into the HAMT hash implementation - it is a reduced version of `tuple` class available in test_hamt.cpp, created by Thomas Gilray and Kristopher Micinski 2017.
 
 ``` c++ 
 ...
@@ -298,7 +342,14 @@ u64 prim_hash_45remove(u64 h, u64 k)
 
 ### 2) Immutable hashsets using HAMT, supporting set, set-add, set-remove.
 
-I also implemented set, set-add, and set-remove using HAMT. The way I implemented set is simple; a set is merely a hashmap but with its keys mapped to itself (as values). I also had to modify the header-str line limit to a bigger number in order to fit in my additional functions. set-member? was also included as it was necessary for testing. 
+Function | Params | Returns
+--- | --- | ---
+`(set)` &rarr; and/c set? immutable? | | an immutable set
+`(set-member? st v)` &rarr; boolean? | `st`: generic-set?<br />`v`: any/c | true if v is in st, false otherwise.
+`(set-add st v)` &rarr; generic-set? | `st`: generic-set?<br />`v`: any/c | set that includes v plus all elements of st.
+`(set-remove st v)` &rarr; generic-set? | `st`: generic-set?<br />`v`: any/c | set that includes all elements of st except v.
+
+I also implemented set, set-add, and set-remove using HAMT. The way I implemented set is simple; a set is merely a hashmap but with its keys mapped to itself (as values). set-member? was also included as it was necessary for testing. I added these primitive functions to `utils.rkt` and defined them in `header.cpp` as shown below.
 
 ``` c++ 
 ...
