@@ -17,6 +17,8 @@
 
   (define llvm-result (eval-llvm stage3))
 
+  ;(println llvm-result)
+
   (if (or
       (equal? llvm-result 'letrec_letrec*_binding_error)
       (equal? llvm-result 'function_application_error))
