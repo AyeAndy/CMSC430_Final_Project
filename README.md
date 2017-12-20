@@ -77,7 +77,7 @@ Function | Params | Returns
 
 ##### Tests: `llvm-bad-status/vector-ref-error0.scm`, `llvm-bad-status/vector-set-error0.scm`
 
-An error is thrown if there is attempt to reference an index of a vector that is out of bounds. I decided to change the `header.cpp` to reflect this error when it occurs. When the index parameter is greater than the length of the vector (stored in the first element of the vector, bitshifted to the left 3 times), I throw an error that alerts the users of an index out of bounds exception.
+An error is thrown if there is attempt to reference an index of a vector that is out of bounds. I decided to change the `header.cpp` to reflect this error when it occurs. Specifically, I added if statements to `vector-ref` and `vector-set!`. When the index parameter is greater than the length of the vector (stored in the first element of the vector, bitshifted to the left 3 times), I throw an error that alerts the users of an index out of bounds exception.
 
 ``` c++
 ...
