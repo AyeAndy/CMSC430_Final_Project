@@ -1,0 +1,3 @@
+{
+    "files.associations": {"thread":"cpp","*.tcc":"cpp","istream":"cpp","memory":"cpp"}
+}

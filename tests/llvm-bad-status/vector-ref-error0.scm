@@ -1,0 +1,1 @@
+(let ([x (make-vector 5 5)]) (vector-ref x 5))

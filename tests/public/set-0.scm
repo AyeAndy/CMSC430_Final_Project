@@ -1,0 +1,1 @@
+(define x (set)) (set! x (set-add x 5)) (if (set-member? x 5) 1 0)
