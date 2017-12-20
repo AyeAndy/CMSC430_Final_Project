@@ -251,7 +251,7 @@ Function | Params | Returns
 `(hash-ref hash key)` &rarr; any? | `h`: hash?<br />`k`: any/c | the value of key in hash
 `(hash-set hash key value)` &rarr; and/c hash? hash-equal? immutable? | `h`: hash?<br />`k`: any/c<br />`v`: any/c | an immutable hash table
 
-hash-ref, hash-set, and hash-remove are implemented (hash-remove is added to utils.rkt) using HAMT. I added these primitive functions to `utils.rkt`. I defined new methods in `header.cpp` that matches `hash`, `hash-ref`, `hash-set`, and `hash-ref` prims. This hash implementation is limited and does not reflect all of the possible ways of calling these functions. A struct called `c_d` was used and passed into the HAMT hash implementation - it is a reduced version of `tuple` class available in test_hamt.cpp, created by Thomas Gilray and Kristopher Micinski 2017.
+hash-ref, hash-set, and hash-remove are implemented (hash-remove is added to utils.rkt) using HAMT. I added these primitive functions to `utils.rkt`. I defined new methods in `header.cpp` that matches `hash`, `hash-ref`, `hash-set`, and `hash-ref` prims. This hash implementation is limited and does not reflect all of the possible ways of calling these functions. A struct called `c_d` was used and passed into the HAMT hash implementation - it is a reduced version of `tuple` struct available in test_hamt.cpp, created by Thomas Gilray and Kristopher Micinski 2017.
 
 ``` c++ 
 ...
